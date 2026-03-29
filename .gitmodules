@@ -1,0 +1,3 @@
+[submodule "vendor/stellarium-skycultures"]
+	path = vendor/stellarium-skycultures
+	url = https://github.com/Stellarium/stellarium-skycultures.git
