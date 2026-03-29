@@ -1,0 +1,13 @@
+This package republishes material from the Stellarium skycultures project.
+
+Western sky culture license summary from the upstream `description.md`:
+
+Text and data: CC BY-SA
+Illustrations: Free Art License
+
+Authors:
+
+Stellarium's team.
+Illustrations by Johan Meuris.
+
+See the packaged `dist/description.md` and the upstream vendor sources in `vendor/stellarium-skycultures/western/` for the original attribution and license text carried with this material.

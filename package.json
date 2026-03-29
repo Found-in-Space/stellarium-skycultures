@@ -1,0 +1,17 @@
+{
+  "name": "stellarium-skycultures",
+  "private": true,
+  "type": "module",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Found-in-Space/stellarium-skycultures.git"
+  },
+  "workspaces": [
+    "packages/*"
+  ],
+  "scripts": {
+    "build": "node ./scripts/build-packages.js",
+    "build:western": "node ./scripts/build-packages.js western"
+  }
+}
