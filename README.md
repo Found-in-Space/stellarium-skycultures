@@ -1,74 +1,61 @@
-# stellarium-skycultures
+# Found in Space — Stellarium Skycultures
 
-Packaging workspace for Found in Space constellation art distributions derived from the Stellarium skycultures project.
+Part of [Found in Space](https://foundin.space/), a project that turns real astronomical measurements into interactive explorations of the solar neighbourhood. See all repositories at [github.com/Found-in-Space](https://github.com/Found-in-Space).
 
-The intended public home for this repository is:
+This repository packages constellation artwork from the [Stellarium](https://stellarium.org/) open-source planetarium project into a format that can be loaded by the [Found-in-Space/skykit](https://github.com/Found-in-Space/skykit) viewer runtime.
 
-- GitHub: `https://github.com/Found-in-Space/stellarium-skycultures`
-- npm scope: `@found-in-space`
+## What is a skyculture?
 
-The first published package is:
+A skyculture is the set of constellation patterns, illustrations, and names used by a particular culture or tradition to organise the night sky. The Western skyculture — the one most people in Europe and the Americas will recognise — groups stars into figures like Orion, the Great Bear, and the Pleiades, and draws lines between them. Other traditions divide the sky entirely differently, with their own figures, names, and stories.
 
-- `@found-in-space/stellarium-skycultures-western`
+[Stellarium](https://stellarium.org/) is an open-source planetarium that ships with a large collection of skycultures from around the world, each with line art and often illustrated artwork. This repository takes those resources and repackages them so they can be served as npm packages and consumed by the Found in Space viewer.
 
-## What This Repo Does
+## What's packaged
 
-This repository keeps the packaging code separate from the viewer runtime.
+The Stellarium skycultures collection (40+ traditions) is vendored here in full. Currently, one culture has been packaged for use in the viewer:
 
-- the viewer stays agnostic about which constellation art pack is used
-- each art pack can carry its own manifest, illustrations, and source attribution
-- package builds can embed 3D anchor directions into the generated manifest instead of serving a standalone `constellation_anchors.json` web asset
+- **`@found-in-space/stellarium-skycultures-western`** — the familiar Mediterranean constellation tradition: Orion, Ursa Major, Cassiopeia, and so on. Published to npm and used by the Found in Space site.
 
-## Repository Layout
+The others are vendored and the infrastructure is in place to package them. If a use case arises — or if you want to add your own — the structure here should make that straightforward.
 
-- `vendor/stellarium-skycultures/`: upstream Stellarium skyculture sources, tracked separately
-- `scripts/`: MIT-licensed packaging and manifest-generation code
-- `packages/stellarium-skycultures-western/`: the Western culture package
+## How it works
 
-Generated package output lives under `packages/*/dist/` and is intentionally ignored in git. It is rebuilt locally and during `prepack` before publishing to npm.
+Displaying constellation artwork in a 3D star viewer requires more than image files. Each image needs to know which stars to anchor to, and those anchor stars need 3D positions in space (not just 2D sky coordinates) so the artwork can be correctly projected onto the celestial sphere.
 
-## Anchor Data
+The build process takes three inputs for each culture:
 
-Constellation artwork needs more than image files and 2D pixel anchors. Each anchor star also needs a 3D unit direction in ICRS space so the artwork can be projected onto the celestial sphere.
+1. **Stellarium's `index.json`** — defines the constellations, their line patterns, and which stars (by Hipparcos ID) each illustration is anchored to.
+2. **`constellation-anchors.json`** — a lookup table mapping Hipparcos IDs to 3D ICRS unit direction vectors, checked in as source data under `packages/<culture>/source/`. This is generated once using `scripts/build-anchors.py` and only needs to be regenerated when packaging a new culture or if the pipeline coordinate data changes. See [`docs/building-anchors.md`](docs/building-anchors.md) for details.
+3. **Illustration images** — the artwork assets from the Stellarium culture directory.
 
-At the moment, each culture package can keep package-owned anchor source data under `packages/<package-name>/source/`. For the Western package, that currently means a checked-in `constellation-anchors.json` source artifact which is folded into the generated manifest during the package build.
-
-Conceptually, the anchor-generation step is:
-
-- read the culture `index.json`
-- collect the `hip` ids referenced by image anchors
-- look those stars up in a star catalog with ICRS coordinates
-- normalize the star vectors to unit directions
-- embed those directions into the generated package manifest
-
-This repository does not yet contain the final anchor-builder implementation. The current anchor source was produced by an earlier Python-based workflow and is kept here temporarily as package-owned source input. The likely long-term direction is to replace that with a local build step in this repository once we settle on the exact star-catalog input.
+The JS build script (`scripts/build-packages.js`) combines these into a `manifest.json` in Found in Space's own format, alongside the illustrations and a description, and writes them to `dist/`. That output is what gets published to npm.
 
 ## Build
 
-From the repository root:
-
 ```bash
-npm run build
+npm run build           # build all packaged cultures
+npm run build:western   # build only the Western package
 ```
 
-Or build only the Western package:
+Generated `dist/` output is not committed to git. It is rebuilt locally and automatically during `prepack` before npm publishing.
 
-```bash
-npm run build:western
+## Repository layout
+
 ```
-
-## Publishing Direction
-
-The repository is intended to be named `stellarium-skycultures`.
-
-Published npm distributions should use per-culture package names under the Found in Space scope, for example:
-
-- `@found-in-space/stellarium-skycultures-western`
-
-That split keeps individual cultures installable and cacheable on their own while preserving a consistent naming scheme.
+vendor/stellarium-skycultures/        upstream Stellarium skyculture sources (submodule)
+scripts/
+  build-packages.js                   JS packaging script
+  build-anchors.py                    Python script to regenerate constellation-anchors.json
+docs/
+  building-anchors.md                 how to regenerate anchor data for a culture
+packages/
+  stellarium-skycultures-western/
+    source/constellation-anchors.json HIP ID → 3D unit direction lookup (checked in)
+    dist/                             generated package output (not in git)
+```
 
 ## Licensing
 
-The code in this repository is licensed under MIT. That includes the packaging scripts and package glue code in this repository unless a more specific file says otherwise.
+The packaging code in this repository (`scripts/`, `packages/*/source/`) is MIT licensed.
 
-Vendored skyculture content and packaged culture assets are not relicensed under MIT. They retain their upstream licenses and attribution requirements. For example, the Western package carries its own license summary in `packages/stellarium-skycultures-western/LICENSE.txt`, and the upstream material remains under the licenses described in the vendored Stellarium sources.
+The vendored skyculture content is not relicensed. Each culture retains its upstream license and attribution requirements from the Stellarium project. The Western package, for example, is text and data under CC BY-SA and illustrations under the Free Art License — see `packages/stellarium-skycultures-western/LICENSE.txt` for details.
