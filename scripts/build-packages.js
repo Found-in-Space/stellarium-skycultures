@@ -6,6 +6,8 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const repoRoot = path.resolve(__dirname, '..');
 const packagesRoot = path.join(repoRoot, 'packages');
 const vendorRoot = path.join(repoRoot, 'vendor/stellarium-skycultures');
+const SKYCULTURE_MANIFEST_FORMAT = 'found-in-space/stellarium-skyculture-manifest@1';
+const ANCHORED_IMAGE_MANIFEST_FORMAT = 'found-in-space/anchored-image-manifest@1';
 
 const ANCHOR_ASTROMETRY = {
   frame: 'icrs',
@@ -220,7 +222,7 @@ function buildManifest(indexData, anchorRecords, options) {
   }
 
   return {
-    format: 'found-in-space-constellation-art-manifest@1',
+    format: SKYCULTURE_MANIFEST_FORMAT,
     sourceFormat: 'stellarium-skyculture',
     id: indexData.id,
     region: indexData.region ?? null,
@@ -285,6 +287,7 @@ function buildCulturePackage(config) {
   writeFile(path.join(config.packageDir, 'README.md'), createReadme(config));
   writeFile(path.join(config.packageDir, 'src/index.js'), createIndexModule());
   writeFile(path.join(config.packageDir, 'src/bundled.js'), createBundledModule(manifest, illustrationFiles));
+  writeFile(path.join(config.packageDir, 'src/anchored-image.js'), createAnchoredImageModule(manifest, illustrationFiles));
 
   console.log(`Built ${config.cultureId} -> ${path.relative(repoRoot, distDir)}`);
 }
@@ -310,6 +313,7 @@ function createPackageJson(config) {
     exports: {
       '.': './src/index.js',
       './bundled': './src/bundled.js',
+      './anchored-image': './src/anchored-image.js',
       './manifest.json': './dist/manifest.json',
       './description.md': './dist/description.md',
       './illustrations/*': './dist/illustrations/*',
@@ -335,7 +339,7 @@ Packaged ${config.displayName} constellation artwork derived from Stellarium sky
 - \`dist/illustrations/*\`: packaged artwork assets
 - \`dist/description.md\`: upstream culture description
 
-The viewer should consume the generated manifest rather than the package's source-only HIP anchor lookup.
+The viewer should consume the generated manifest rather than the package's source-only HIP anchor lookup. Apps that only need anchored artwork can import the canonical anchored-image view from \`${config.packageName}/anchored-image\`.
 
 Generated \`dist/\` output is intended to stay out of git. Build it locally or via \`prepack\` before publishing to npm.
 
@@ -378,6 +382,12 @@ Bundler usage can import asset URLs that are visible to Vite, Astro client scrip
 
 \`\`\`js
 import { bundledManifest } from '${config.packageName}/bundled';
+\`\`\`
+
+For \`@found-in-space/anchored-image\`, import the canonical manifest view:
+
+\`\`\`js
+import { anchoredImageManifest } from '${config.packageName}/anchored-image';
 \`\`\`
 
 Astro frontmatter runs on the server, so use direct asset imports there:
@@ -501,6 +511,111 @@ function withBundledAssetUrls(manifest) {
       };
     }),
   };
+}
+`;
+}
+
+function createAnchoredImageModule(manifest, illustrationFiles) {
+  const imageFiles = [...new Set([...illustrationFiles, ...getManifestImageFiles(manifest)])].sort();
+  const imageUrlEntries = imageFiles
+    .map((file) => `  ${JSON.stringify(file)}: new URL(${JSON.stringify(`../dist/${file}`)}, import.meta.url).href,`)
+    .join('\n');
+
+  return `import { createManifest } from './index.js';
+
+export const ANCHORED_IMAGE_MANIFEST_FORMAT = ${JSON.stringify(ANCHORED_IMAGE_MANIFEST_FORMAT)};
+
+const imageUrls = {
+${imageUrlEntries}
+};
+
+export const anchoredImageManifest = createAnchoredImageManifest();
+
+export function createAnchoredImageManifest(options = {}) {
+  return toAnchoredImageManifest(createManifest(options), {
+    imageUrls: options.imageUrls ?? imageUrls,
+  });
+}
+
+function toAnchoredImageManifest(manifest, options = {}) {
+  const imageUrls = options.imageUrls ?? {};
+  return {
+    format: ANCHORED_IMAGE_MANIFEST_FORMAT,
+    id: manifest.id,
+    label: manifest.id,
+    assetBaseUrl: null,
+    images: (manifest.constellations ?? []).map((constellation, index) => toAnchoredImage(constellation, manifest, imageUrls, index)),
+    attribution: manifest.license,
+    metadata: {
+      sourceFormat: manifest.format,
+      sourcePackage: manifest.source,
+      astrometry: manifest.astrometry,
+    },
+  };
+}
+
+function toAnchoredImage(constellation, manifest, imageUrls, index) {
+  const image = constellation.image ?? {};
+  const imageFile = image.file;
+  return {
+    id: constellation.id ?? constellation.iau ?? \`anchored-image-\${index}\`,
+    label: resolveConstellationLabel(constellation),
+    groupId: constellation.iau ?? undefined,
+    image: {
+      src: image.url ?? imageUrls[imageFile] ?? imageFile ?? '',
+      width: Array.isArray(image.size) && Number.isFinite(Number(image.size[0])) ? Number(image.size[0]) : 512,
+      height: Array.isArray(image.size) && Number.isFinite(Number(image.size[1])) ? Number(image.size[1]) : 512,
+      anchors: (image.anchors ?? []).map(toAnchoredImageAnchor).filter(Boolean),
+    },
+    attribution: manifest.license,
+    metadata: {
+      skycultureId: manifest.id,
+      sourceFormat: manifest.format,
+      sourceConstellationId: constellation.id ?? null,
+      iau: constellation.iau ?? null,
+      common_name: constellation.common_name ?? null,
+      lines: Array.isArray(constellation.lines) ? constellation.lines : [],
+    },
+  };
+}
+
+function toAnchoredImageAnchor(anchor) {
+  const icrs = anchor?.icrs;
+  const pixel = anchor?.pixel;
+  if (!icrs || !pixel) {
+    return null;
+  }
+  return {
+    pixel: {
+      x: Number(pixel.x),
+      y: Number(pixel.y),
+    },
+    target: {
+      kind: 'direction',
+      frame: 'icrs',
+      x: Number(icrs.x),
+      y: Number(icrs.y),
+      z: Number(icrs.z),
+    },
+    metadata: {
+      hip: anchor.hip,
+      raDeg: anchor.raDeg,
+      decDeg: anchor.decDeg,
+    },
+  };
+}
+
+function resolveConstellationLabel(constellation) {
+  const commonName = constellation.common_name;
+  if (commonName && typeof commonName === 'object') {
+    if (typeof commonName.native === 'string' && commonName.native.trim()) {
+      return commonName.native.trim();
+    }
+    if (typeof commonName.english === 'string' && commonName.english.trim()) {
+      return commonName.english.trim();
+    }
+  }
+  return constellation.iau ?? constellation.id ?? null;
 }
 `;
 }

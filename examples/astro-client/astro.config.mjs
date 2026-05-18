@@ -6,7 +6,7 @@ export default defineConfig({
     optimizeDeps: {
       exclude: [
         '@found-in-space/stellarium-skycultures-western',
-        '@found-in-space/stellarium-skycultures-western/bundled',
+        '@found-in-space/stellarium-skycultures-western/anchored-image',
       ],
     },
   },

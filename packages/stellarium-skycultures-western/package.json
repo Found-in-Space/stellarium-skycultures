@@ -18,6 +18,7 @@
   "exports": {
     ".": "./src/index.js",
     "./bundled": "./src/bundled.js",
+    "./anchored-image": "./src/anchored-image.js",
     "./manifest.json": "./dist/manifest.json",
     "./description.md": "./dist/description.md",
     "./illustrations/*": "./dist/illustrations/*"

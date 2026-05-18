@@ -18,6 +18,7 @@ for (const packageDir of packageDirs) {
   const config = readJson(path.join(packageDir, 'source/package-config.json'));
   const packageJson = readJson(path.join(packageDir, 'package.json'));
   const bundledSource = fs.readFileSync(path.join(packageDir, 'src/bundled.js'), 'utf8');
+  const anchoredImageSource = fs.readFileSync(path.join(packageDir, 'src/anchored-image.js'), 'utf8');
   const illustrationFiles = fs.readdirSync(path.join(packageDir, 'dist/illustrations'))
     .filter((file) => file.endsWith('.webp'))
     .map((file) => `illustrations/${file}`)
@@ -26,6 +27,7 @@ for (const packageDir of packageDirs) {
   assert.equal(packageJson.name, config.packageName);
   assert.equal(packageJson.exports['.'], './src/index.js');
   assert.equal(packageJson.exports['./bundled'], './src/bundled.js');
+  assert.equal(packageJson.exports['./anchored-image'], './src/anchored-image.js');
   assert.equal(packageJson.exports['./manifest.json'], './dist/manifest.json');
   assert.equal(packageJson.exports['./illustrations/*'], './dist/illustrations/*');
 
@@ -42,14 +44,24 @@ for (const packageDir of packageDirs) {
   const bundledModule = await import(pathToFileURL(path.join(packageDir, 'src/bundled.js')));
   assert.ok(bundledModule.bundledManifest);
   assert.equal(bundledModule.bundledManifest.id, config.cultureId);
+  assert.equal(bundledModule.bundledManifest.format, 'found-in-space/stellarium-skyculture-manifest@1');
   assertAstrometryMetadata(bundledModule.bundledManifest, config.cultureId);
   assertAnchorShape(bundledModule.bundledManifest, config.cultureId);
   assertPreservedStellariumData(bundledModule.bundledManifest, config.cultureId);
 
+  const anchoredImageModule = await import(pathToFileURL(path.join(packageDir, 'src/anchored-image.js')));
+  assert.equal(anchoredImageModule.ANCHORED_IMAGE_MANIFEST_FORMAT, 'found-in-space/anchored-image-manifest@1');
+  assert.equal(anchoredImageModule.anchoredImageManifest.format, 'found-in-space/anchored-image-manifest@1');
+  assert.equal(anchoredImageModule.anchoredImageManifest.images.length, bundledModule.bundledManifest.constellations.length);
+  assertAnchoredImageManifest(anchoredImageModule.anchoredImageManifest, config.cultureId);
+
   const newUrlCount = (bundledSource.match(/new URL\("\.\.\/dist\/illustrations\/[^"]+\.webp", import\.meta\.url\)/g) ?? []).length;
   assert.equal(newUrlCount, illustrationFiles.length, `${config.cultureId} should expose every illustration through new URL()`);
+  const anchoredImageNewUrlCount = (anchoredImageSource.match(/new URL\("\.\.\/dist\/illustrations\/[^"]+\.webp", import\.meta\.url\)/g) ?? []).length;
+  assert.equal(anchoredImageNewUrlCount, illustrationFiles.length, `${config.cultureId} should expose every illustration through anchored-image new URL()`);
   for (const file of illustrationFiles) {
     assert.ok(bundledSource.includes(`"../dist/${file}"`), `missing bundled asset reference for ${file}`);
+    assert.ok(anchoredImageSource.includes(`"../dist/${file}"`), `missing anchored-image asset reference for ${file}`);
   }
 }
 
@@ -73,6 +85,20 @@ function assertAnchorShape(manifest, cultureId) {
   }
   assert.equal(Number.isFinite(anchor.raDeg), true, `${cultureId} anchor should include finite raDeg`);
   assert.equal(Number.isFinite(anchor.decDeg), true, `${cultureId} anchor should include finite decDeg`);
+}
+
+function assertAnchoredImageManifest(manifest, cultureId) {
+  const image = manifest.images.find((candidate) => candidate.image?.anchors?.length > 0);
+  assert.ok(image, `${cultureId} anchored-image manifest should include anchored images`);
+  assert.equal(typeof image.image.src, 'string', `${cultureId} anchored-image source should be resolved`);
+  const anchor = image.image.anchors[0];
+  assert.equal(Number.isFinite(anchor.pixel?.x), true, `${cultureId} anchored-image anchor should include finite pixel.x`);
+  assert.equal(anchor.target?.kind, 'direction', `${cultureId} anchored-image anchor should use direction target`);
+  assert.equal(anchor.target?.frame, 'icrs', `${cultureId} anchored-image anchor should use ICRS target frame`);
+  assert.equal(Number.isFinite(anchor.target?.x), true, `${cultureId} anchored-image target should include finite x`);
+  assert.equal(Number.isFinite(anchor.metadata?.hip), true, `${cultureId} anchored-image anchor should preserve HIP metadata`);
+  assert.equal(Number.isFinite(anchor.metadata?.raDeg), true, `${cultureId} anchored-image anchor should preserve RA metadata`);
+  assert.equal(Number.isFinite(anchor.metadata?.decDeg), true, `${cultureId} anchored-image anchor should preserve Dec metadata`);
 }
 
 function assertAstrometryMetadata(manifest, cultureId) {

@@ -28,7 +28,10 @@ The build process takes three inputs for each culture:
 2. **`constellation-anchors.json`** — a lookup table mapping Hipparcos IDs to ICRS unit-vector objects plus RA/Dec coordinates, checked in as source data under `packages/<culture>/source/`. This is generated once using `scripts/build-anchors.py`, which downloads the Hipparcos New Reduction catalog directly from Vizier into a local cache. See [`docs/building-anchors.md`](docs/building-anchors.md) for details.
 3. **Illustration images** — the artwork assets from the Stellarium culture directory.
 
-The JS build script (`scripts/build-packages.js`) combines these into a `manifest.json` in Found in Space's own format, alongside the illustrations and a description, and writes them to `dist/`. That output is what gets published to npm.
+The JS build script (`scripts/build-packages.js`) combines these into a
+`manifest.json` using the `found-in-space/stellarium-skyculture-manifest@1`
+format, alongside the illustrations and a description, and writes them to
+`dist/`. That output is what gets published to npm.
 
 The generated manifest keeps the Stellarium culture data that is useful to
 viewer applications: constellation line definitions, artwork anchors, asterisms,
@@ -45,6 +48,7 @@ do not need to read `source/constellation-anchors.json` directly:
 
 ```json
 {
+  "format": "found-in-space/stellarium-skyculture-manifest@1",
   "astrometry": {
     "anchors": {
       "frame": "icrs",
@@ -85,6 +89,18 @@ Boundary edges deliberately keep their own `B1875` epoch metadata because those
 are raw Stellarium/IAU boundary strings, not the published ICRS anchor
 coordinates.
 
+Apps that only need artwork solving/rendering can import the generated
+canonical anchored-image view instead of depending on the richer skyculture
+shape:
+
+```js
+import { anchoredImageManifest } from '@found-in-space/stellarium-skycultures-western/anchored-image';
+```
+
+That export uses the `found-in-space/anchored-image-manifest@1` schema from
+`@found-in-space/anchored-image` and keeps skyculture-only fields such as
+asterisms and boundaries out of the renderer-neutral image contract.
+
 ## Build
 
 ```bash
@@ -100,12 +116,12 @@ Generated `dist/` output is not committed to git. It is rebuilt locally and auto
 The `examples/` directory contains small buildable apps rather than documentation-only snippets:
 
 - `examples/astro-static`: Astro frontmatter imports a single illustration asset directly.
-- `examples/astro-client`: Astro client-side script imports the generated bundled manifest.
-- `examples/vite`: Vite imports the generated bundled manifest.
-- `examples/webpack`: Webpack 5 imports the generated bundled manifest.
-- `examples/rspack`: Rspack imports the generated bundled manifest.
-- `examples/rollup`: Rollup imports the generated bundled manifest with explicit resolve, JSON, and import-meta asset plugins.
-- `examples/parcel`: Parcel imports the generated bundled manifest with `@parcel/resolver-default.packageExports` enabled.
+- `examples/astro-client`: Astro client-side script imports the generated anchored-image manifest view.
+- `examples/vite`: Vite imports the generated anchored-image manifest view.
+- `examples/webpack`: Webpack 5 imports the generated anchored-image manifest view.
+- `examples/rspack`: Rspack imports the generated anchored-image manifest view.
+- `examples/rollup`: Rollup imports the generated anchored-image manifest view with explicit resolve and import-meta asset plugins.
+- `examples/parcel`: Parcel imports the generated anchored-image manifest view with `@parcel/resolver-default.packageExports` enabled.
 - `examples/esbuild-direct-asset`: esbuild imports a direct illustration asset with a file loader.
 - `examples/node-esm`: Node ESM resolves package-relative file URLs without bundling.
 

@@ -8,7 +8,7 @@ Packaged Western constellation artwork derived from Stellarium sky cultures for 
 - `dist/illustrations/*`: packaged artwork assets
 - `dist/description.md`: upstream culture description
 
-The viewer should consume the generated manifest rather than the package's source-only HIP anchor lookup.
+The viewer should consume the generated manifest rather than the package's source-only HIP anchor lookup. Apps that only need anchored artwork can import the canonical anchored-image view from `@found-in-space/stellarium-skycultures-western/anchored-image`.
 
 Generated `dist/` output is intended to stay out of git. Build it locally or via `prepack` before publishing to npm.
 
@@ -51,6 +51,12 @@ Bundler usage can import asset URLs that are visible to Vite, Astro client scrip
 
 ```js
 import { bundledManifest } from '@found-in-space/stellarium-skycultures-western/bundled';
+```
+
+For `@found-in-space/anchored-image`, import the canonical manifest view:
+
+```js
+import { anchoredImageManifest } from '@found-in-space/stellarium-skycultures-western/anchored-image';
 ```
 
 Astro frontmatter runs on the server, so use direct asset imports there:
