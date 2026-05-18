@@ -1,6 +1,6 @@
 {
   "name": "@found-in-space/stellarium-skycultures-western",
-  "version": "0.1.0",
+  "version": "0.2.0",
   "description": "Western Stellarium sky culture assets packaged for Found in Space viewers",
   "type": "module",
   "license": "SEE LICENSE IN LICENSE.txt",
