@@ -4,13 +4,29 @@ Packaged Western constellation artwork derived from Stellarium sky cultures for 
 
 ## What This Package Contains
 
-- `dist/manifest.json`: generated culture manifest with per-anchor 3D direction vectors embedded
+- `dist/manifest.json`: generated culture manifest with image anchors, ICRS and RA/Dec coordinates, anchor astrometry metadata, asterisms, and boundary metadata embedded
 - `dist/illustrations/*`: packaged artwork assets
 - `dist/description.md`: upstream culture description
 
-The viewer should consume the generated manifest rather than the legacy standalone anchor data.
+The viewer should consume the generated manifest rather than the package's source-only HIP anchor lookup.
 
 Generated `dist/` output is intended to stay out of git. Build it locally or via `prepack` before publishing to npm.
+
+## Manifest Shape
+
+Anchor records use object-shaped coordinates:
+
+```json
+{
+  "hip": 97649,
+  "pixel": { "x": 163, "y": 232 },
+  "icrs": { "x": 0.459, "y": -0.875, "z": 0.154 },
+  "raDeg": 297.698,
+  "decDeg": 8.87
+}
+```
+
+`astrometry.anchors` declares that these anchors are ICRS unit vectors from the Hipparcos New Reduction catalogue, propagated from `J1991.25` to `J2016.0`. Boundary edges are preserved separately under `boundaries` with their own source, type, and epoch metadata.
 
 ## Build
 

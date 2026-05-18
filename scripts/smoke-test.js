@@ -42,6 +42,9 @@ for (const packageDir of packageDirs) {
   const bundledModule = await import(pathToFileURL(path.join(packageDir, 'src/bundled.js')));
   assert.ok(bundledModule.bundledManifest);
   assert.equal(bundledModule.bundledManifest.id, config.cultureId);
+  assertAstrometryMetadata(bundledModule.bundledManifest, config.cultureId);
+  assertAnchorShape(bundledModule.bundledManifest, config.cultureId);
+  assertPreservedStellariumData(bundledModule.bundledManifest, config.cultureId);
 
   const newUrlCount = (bundledSource.match(/new URL\("\.\.\/dist\/illustrations\/[^"]+\.webp", import\.meta\.url\)/g) ?? []).length;
   assert.equal(newUrlCount, illustrationFiles.length, `${config.cultureId} should expose every illustration through new URL()`);
@@ -54,4 +57,41 @@ console.log(`Smoke-tested ${packageDirs.length} skyculture package(s).`);
 
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
+}
+
+function assertAnchorShape(manifest, cultureId) {
+  const anchor = manifest.constellations
+    .flatMap((constellation) => constellation.image?.anchors ?? [])
+    .find((candidate) => candidate.icrs && typeof candidate.icrs === 'object');
+  assert.ok(anchor, `${cultureId} should include anchors with ICRS vectors`);
+  assert.equal(anchor.direction, undefined, `${cultureId} should not emit legacy direction anchors`);
+  assert.equal(anchor.pos, undefined, `${cultureId} should not emit legacy pos anchors`);
+  assert.equal(Number.isFinite(anchor.pixel?.x), true, `${cultureId} anchor should include finite pixel.x`);
+  assert.equal(Number.isFinite(anchor.pixel?.y), true, `${cultureId} anchor should include finite pixel.y`);
+  for (const axis of ['x', 'y', 'z']) {
+    assert.equal(Number.isFinite(anchor.icrs?.[axis]), true, `${cultureId} anchor icrs.${axis} should be finite`);
+  }
+  assert.equal(Number.isFinite(anchor.raDeg), true, `${cultureId} anchor should include finite raDeg`);
+  assert.equal(Number.isFinite(anchor.decDeg), true, `${cultureId} anchor should include finite decDeg`);
+}
+
+function assertAstrometryMetadata(manifest, cultureId) {
+  const anchors = manifest.astrometry?.anchors;
+  assert.equal(anchors?.frame, 'icrs', `${cultureId} should declare anchor frame`);
+  assert.equal(anchors?.coordinateKind, 'unit-vector', `${cultureId} should declare anchor coordinate kind`);
+  assert.equal(anchors?.catalog, 'Hipparcos New Reduction', `${cultureId} should declare anchor catalog`);
+  assert.equal(anchors?.vizierCatalog, 'I/311/hip2', `${cultureId} should declare Vizier catalog`);
+  assert.equal(anchors?.sourceEpoch, 'J1991.25', `${cultureId} should declare source epoch`);
+  assert.equal(anchors?.targetEpoch, 'J2016.0', `${cultureId} should declare target epoch`);
+  assert.equal(anchors?.properMotionApplied, true, `${cultureId} should declare proper motion handling`);
+}
+
+function assertPreservedStellariumData(manifest, cultureId) {
+  assert.equal(Array.isArray(manifest.asterisms), true, `${cultureId} should preserve Stellarium asterisms`);
+  assert.equal(typeof manifest.boundaries, 'object', `${cultureId} should include boundary metadata when source edges exist`);
+  assert.equal(Array.isArray(manifest.boundaries.edges), true, `${cultureId} boundaries should preserve raw edge strings`);
+  assert.equal(typeof manifest.boundaries.format, 'string', `${cultureId} boundaries should declare their format`);
+  if (manifest.boundaries.edges.length > 0) {
+    assert.equal(typeof manifest.boundaries.edges[0], 'string', `${cultureId} boundary edges should remain raw Stellarium strings`);
+  }
 }

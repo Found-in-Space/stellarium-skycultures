@@ -67,7 +67,8 @@ repository URL:
 {
   "repository": {
     "type": "git",
-    "url": "git+https://github.com/Found-in-Space/stellarium-skycultures.git"
+    "url": "git+https://github.com/Found-in-Space/stellarium-skycultures.git",
+    "directory": "packages/stellarium-skycultures-<culture>"
   }
 }
 ```

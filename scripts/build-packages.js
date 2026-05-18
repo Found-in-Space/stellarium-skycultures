@@ -7,6 +7,17 @@ const repoRoot = path.resolve(__dirname, '..');
 const packagesRoot = path.join(repoRoot, 'packages');
 const vendorRoot = path.join(repoRoot, 'vendor/stellarium-skycultures');
 
+const ANCHOR_ASTROMETRY = {
+  frame: 'icrs',
+  coordinateKind: 'unit-vector',
+  catalog: 'Hipparcos New Reduction',
+  vizierCatalog: 'I/311/hip2',
+  sourceEpoch: 'J1991.25',
+  targetEpoch: 'J2016.0',
+  properMotionApplied: true,
+  requiredSourceColumns: ['HIP', 'RArad', 'DErad', 'Plx', 'pmRA', 'pmDE'],
+};
+
 function readJson(filePath) {
   return JSON.parse(fs.readFileSync(filePath, 'utf8'));
 }
@@ -84,8 +95,82 @@ function requireNonEmptyString(value, label) {
   return value.trim();
 }
 
-function buildManifest(indexData, anchorDirections, options) {
-  const missingDirections = [];
+function normalizeAnchorRecord(value) {
+  if (value && typeof value === 'object') {
+    const icrs = normalizeIcrs(value.icrs);
+    if (!icrs) {
+      return null;
+    }
+    const fallback = raDecFromIcrs(icrs);
+    return {
+      icrs,
+      raDeg: Number.isFinite(Number(value.raDeg)) ? Number(value.raDeg) : fallback.raDeg,
+      decDeg: Number.isFinite(Number(value.decDeg)) ? Number(value.decDeg) : fallback.decDeg,
+    };
+  }
+
+  return null;
+}
+
+function normalizeIcrs(value) {
+  if (value && typeof value === 'object') {
+    const x = Number(value.x);
+    const y = Number(value.y);
+    const z = Number(value.z);
+    return Number.isFinite(x) && Number.isFinite(y) && Number.isFinite(z)
+      ? { x, y, z }
+      : null;
+  }
+  return null;
+}
+
+function raDecFromIcrs(icrs) {
+  const { x, y, z } = icrs;
+  const raDeg = ((Math.atan2(y, x) * 180 / Math.PI) % 360 + 360) % 360;
+  const decDeg = Math.atan2(z, Math.hypot(x, y)) * 180 / Math.PI;
+  return { raDeg, decDeg };
+}
+
+function normalizeAnchorPixel(anchor) {
+  const value = anchor?.pixel ?? anchor?.pos;
+  if (Array.isArray(value) && value.length === 2) {
+    return { x: Number(value[0]), y: Number(value[1]) };
+  }
+  if (value && typeof value === 'object') {
+    return { x: Number(value.x), y: Number(value.y) };
+  }
+  return null;
+}
+
+function cloneJsonValue(value, fallback) {
+  if (value === undefined) {
+    return fallback;
+  }
+  return JSON.parse(JSON.stringify(value));
+}
+
+function createBoundaries(indexData) {
+  const edges = Array.isArray(indexData.edges) ? [...indexData.edges] : [];
+  if (
+    edges.length === 0
+    && indexData.edges_source == null
+    && indexData.edges_epoch == null
+    && indexData.edges_type == null
+  ) {
+    return null;
+  }
+
+  return {
+    type: indexData.edges_type ?? null,
+    source: indexData.edges_source ?? null,
+    epoch: indexData.edges_epoch ?? null,
+    format: 'stellarium-edge-string',
+    edges,
+  };
+}
+
+function buildManifest(indexData, anchorRecords, options) {
+  const missingAnchors = [];
   const constellations = (indexData.constellations ?? []).map((constellation) => {
     const nextConstellation = {
       ...constellation,
@@ -97,20 +182,24 @@ function buildManifest(indexData, anchorDirections, options) {
 
     const nextAnchors = constellation.image.anchors.map((anchor) => {
       const hip = anchor?.hip;
-      const direction = hip != null ? anchorDirections[String(hip)] : null;
-      if (!Array.isArray(direction) || direction.length !== 3) {
-        missingDirections.push({
+      const pixel = normalizeAnchorPixel(anchor);
+      const anchorRecord = hip != null ? normalizeAnchorRecord(anchorRecords[String(hip)]) : null;
+      if (!pixel || !anchorRecord) {
+        missingAnchors.push({
           constellationId: constellation.id ?? constellation.iau ?? 'unknown',
           hip,
+          reason: pixel ? 'missing-anchor-record' : 'missing-pixel',
         });
         return {
           ...anchor,
         };
       }
 
+      const { pos, pixel: _pixel, ...anchorRest } = anchor;
       return {
-        ...anchor,
-        direction,
+        ...anchorRest,
+        pixel,
+        ...anchorRecord,
       };
     });
 
@@ -122,12 +211,12 @@ function buildManifest(indexData, anchorDirections, options) {
     return nextConstellation;
   });
 
-  if (missingDirections.length > 0) {
-    const details = missingDirections
+  if (missingAnchors.length > 0) {
+    const details = missingAnchors
       .slice(0, 10)
-      .map(({ constellationId, hip }) => `${constellationId}:${hip}`)
+      .map(({ constellationId, hip, reason }) => `${constellationId}:${hip ?? 'unknown'}:${reason}`)
       .join(', ');
-    throw new Error(`Missing anchor directions for ${missingDirections.length} anchor(s): ${details}`);
+    throw new Error(`Invalid anchor data for ${missingAnchors.length} anchor(s): ${details}`);
   }
 
   return {
@@ -141,6 +230,7 @@ function buildManifest(indexData, anchorDirections, options) {
       ? [...indexData.langs_use_native_names]
       : [],
     thumbnail: indexData.thumbnail ?? null,
+    thumbnailBscale: indexData.thumbnail_bscale ?? null,
     highlight: indexData.highlight ?? null,
     license: {
       ...options.license,
@@ -152,9 +242,13 @@ function buildManifest(indexData, anchorDirections, options) {
       descriptionFile: 'description.md',
       illustrationsDirectory: 'illustrations',
     },
+    astrometry: {
+      anchors: { ...ANCHOR_ASTROMETRY },
+    },
     constellations,
     commonNames: indexData.common_names ?? {},
-    edges: indexData.edges ?? [],
+    asterisms: cloneJsonValue(indexData.asterisms, []),
+    boundaries: createBoundaries(indexData),
   };
 }
 
@@ -176,8 +270,8 @@ function buildCulturePackage(config) {
   }
 
   const indexData = readJson(indexSourcePath);
-  const anchorDirections = readJson(config.anchorsPath);
-  const manifest = buildManifest(indexData, anchorDirections, config);
+  const anchorRecords = readJson(config.anchorsPath);
+  const manifest = buildManifest(indexData, anchorRecords, config);
 
   removeDirectory(distDir);
   ensureDirectory(distDir);
@@ -237,13 +331,29 @@ Packaged ${config.displayName} constellation artwork derived from Stellarium sky
 
 ## What This Package Contains
 
-- \`dist/manifest.json\`: generated culture manifest with per-anchor 3D direction vectors embedded
+- \`dist/manifest.json\`: generated culture manifest with image anchors, ICRS and RA/Dec coordinates, anchor astrometry metadata, asterisms, and boundary metadata embedded
 - \`dist/illustrations/*\`: packaged artwork assets
 - \`dist/description.md\`: upstream culture description
 
-The viewer should consume the generated manifest rather than the legacy standalone anchor data.
+The viewer should consume the generated manifest rather than the package's source-only HIP anchor lookup.
 
 Generated \`dist/\` output is intended to stay out of git. Build it locally or via \`prepack\` before publishing to npm.
+
+## Manifest Shape
+
+Anchor records use object-shaped coordinates:
+
+\`\`\`json
+{
+  "hip": 97649,
+  "pixel": { "x": 163, "y": 232 },
+  "icrs": { "x": 0.459, "y": -0.875, "z": 0.154 },
+  "raDeg": 297.698,
+  "decDeg": 8.87
+}
+\`\`\`
+
+\`astrometry.anchors\` declares that these anchors are ICRS unit vectors from the Hipparcos New Reduction catalogue, propagated from \`J1991.25\` to \`J2016.0\`. Boundary edges are preserved separately under \`boundaries\` with their own source, type, and epoch metadata.
 
 ## Build
 

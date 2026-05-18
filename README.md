@@ -20,15 +20,70 @@ The others are vendored and the infrastructure is in place to package them. If a
 
 ## How it works
 
-Displaying constellation artwork in a 3D star viewer requires more than image files. Each image needs to know which stars to anchor to, and those anchor stars need 3D positions in space (not just 2D sky coordinates) so the artwork can be correctly projected onto the celestial sphere.
+Displaying constellation artwork in a 3D star viewer requires more than image files. Each image needs to know which stars to anchor to, and those anchor stars need 3D ICRS sky directions (not only image pixels) so the artwork can be correctly projected onto the celestial sphere.
 
 The build process takes three inputs for each culture:
 
 1. **Stellarium's `index.json`** — defines the constellations, their line patterns, and which stars (by Hipparcos ID) each illustration is anchored to.
-2. **`constellation-anchors.json`** — a lookup table mapping Hipparcos IDs to 3D ICRS unit direction vectors, checked in as source data under `packages/<culture>/source/`. This is generated once using `scripts/build-anchors.py` and only needs to be regenerated when packaging a new culture or if the pipeline coordinate data changes. See [`docs/building-anchors.md`](docs/building-anchors.md) for details.
+2. **`constellation-anchors.json`** — a lookup table mapping Hipparcos IDs to ICRS unit-vector objects plus RA/Dec coordinates, checked in as source data under `packages/<culture>/source/`. This is generated once using `scripts/build-anchors.py`, which downloads the Hipparcos New Reduction catalog directly from Vizier into a local cache. See [`docs/building-anchors.md`](docs/building-anchors.md) for details.
 3. **Illustration images** — the artwork assets from the Stellarium culture directory.
 
 The JS build script (`scripts/build-packages.js`) combines these into a `manifest.json` in Found in Space's own format, alongside the illustrations and a description, and writes them to `dist/`. That output is what gets published to npm.
+
+The generated manifest keeps the Stellarium culture data that is useful to
+viewer applications: constellation line definitions, artwork anchors, asterisms,
+thumbnail/highlight metadata, and raw boundary edges with their source, epoch,
+and type. Anchor records are normalized for consumers as `pixel`, `hip`, `icrs`,
+`raDeg`, and `decDeg`, and `astrometry.anchors` records the catalogue, frame,
+source epoch, and target epoch used for those coordinates.
+
+## Manifest Shape
+
+The generated package manifest is the consumer-facing file. It joins Stellarium
+image anchor pixels with the generated Hipparcos anchor coordinates so consumers
+do not need to read `source/constellation-anchors.json` directly:
+
+```json
+{
+  "astrometry": {
+    "anchors": {
+      "frame": "icrs",
+      "coordinateKind": "unit-vector",
+      "catalog": "Hipparcos New Reduction",
+      "vizierCatalog": "I/311/hip2",
+      "sourceEpoch": "J1991.25",
+      "targetEpoch": "J2016.0",
+      "properMotionApplied": true
+    }
+  },
+  "constellations": [
+    {
+      "image": {
+        "anchors": [
+          {
+            "hip": 97649,
+            "pixel": { "x": 163, "y": 232 },
+            "icrs": { "x": 0.459, "y": -0.875, "z": 0.154 },
+            "raDeg": 297.698,
+            "decDeg": 8.87
+          }
+        ]
+      }
+    }
+  ],
+  "asterisms": [],
+  "boundaries": {
+    "type": "IAU",
+    "epoch": "B1875",
+    "format": "stellarium-edge-string",
+    "edges": []
+  }
+}
+```
+
+Boundary edges deliberately keep their own `B1875` epoch metadata because those
+are raw Stellarium/IAU boundary strings, not the published ICRS anchor
+coordinates.
 
 ## Build
 
@@ -68,7 +123,7 @@ docs/
   building-anchors.md                 how to regenerate anchor data for a culture
 packages/
   stellarium-skycultures-western/
-    source/constellation-anchors.json HIP ID → 3D unit direction lookup (checked in)
+    source/constellation-anchors.json HIP ID → ICRS object + RA/Dec lookup (checked in)
     dist/                             generated package output (not in git)
 ```
 

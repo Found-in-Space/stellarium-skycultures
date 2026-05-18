@@ -1,40 +1,66 @@
 # Building constellation-anchors.json
 
-Each culture package includes a `source/constellation-anchors.json` file that maps Hipparcos star IDs to 3D unit direction vectors in ICRS space. This is what allows constellation illustrations to be correctly positioned on the celestial sphere in a 3D viewer.
+Each culture package includes a `source/constellation-anchors.json` file that maps Hipparcos star IDs to ICRS unit-vector objects plus RA/Dec coordinates. This is what allows constellation illustrations to be correctly positioned on the celestial sphere in a 3D viewer while still being easy to inspect in familiar sky coordinates.
+
+The source anchor file is a HIP lookup, not the consumer artwork manifest. Pixel
+coordinates belong to each Stellarium image anchor and are joined with these HIP
+records by `scripts/build-packages.js` when it writes `dist/manifest.json`.
 
 This file is checked into the repository as source data and does not need to be regenerated in normal use. You only need to rebuild it when:
 
 - packaging a new skyculture for the first time, or
-- the coordinate data from the star pipeline has changed significantly.
+- the Hipparcos source catalog or coordinate convention changes significantly.
 
-## What you need
+## What You Need
 
-The script reads the Hipparcos parquet produced by [Found-in-Space/pipeline](https://github.com/Found-in-Space/pipeline):
+The anchor builder downloads the Hipparcos New Reduction catalog directly from
+Vizier catalog `I/311/hip2` using `astroquery`, then uses `astropy` to compute
+ICRS unit-vector objects and derived RA/Dec coordinates.
 
-```bash
-fis-pipeline hip build --project project.toml
-```
+Generated anchors are propagated from the Hipparcos source epoch `J1991.25` to
+the package anchor epoch `J2016.0`. The JS package manifest records this under
+`astrometry.anchors` so consumers do not have to infer coordinate provenance
+from the build script.
 
-This downloads the Hipparcos catalogue and writes a parquet file (path set by `[hip] output_parquet` in your project config). That file contains ~118,000 stars with Sun-centred ICRS Cartesian coordinates — one of which is used for each constellation image anchor.
+The script carries its Python requirements in a uv inline dependency block:
+
+- Python `>=3.11`
+- `astropy==7.2.0`
+- `astroquery==0.4.10`
+
+`uv` uses those pins for the command environment, so no project-local virtualenv
+setup is needed.
 
 ## Running the script
 
-The script has no install step. Run it directly with `uv`:
+On the first run, let the script download and cache the Hipparcos ECSV under
+`.cache/hipparcos2.ecsv`:
 
 ```bash
 uv run scripts/build-anchors.py \
-    --hip-parquet path/to/hip_stars.parquet \
+    --download \
     --index vendor/stellarium-skycultures/western/index.json \
     --output packages/stellarium-skycultures-western/source/constellation-anchors.json
 ```
 
-The `--index` and `--output` arguments both default to the Western culture paths shown above, so for a Western rebuild you only need to supply `--hip-parquet`:
+The `--index` and `--output` arguments both default to the Western culture paths
+shown above, so for a Western rebuild you can use:
 
 ```bash
-uv run scripts/build-anchors.py --hip-parquet path/to/hip_stars.parquet
+uv run scripts/build-anchors.py --download
 ```
 
-`uv` will install `pandas` and `pyarrow` into a temporary environment automatically — no virtualenv setup required.
+After the ECSV has been cached, rebuilds can run offline:
+
+```bash
+uv run scripts/build-anchors.py
+```
+
+Use `--force-download` to refresh the cached Hipparcos file. To keep a cache
+outside the repository, pass `--hip-ecsv path/to/hipparcos2.ecsv`.
+
+`uv` installs the pinned Python dependencies into an isolated environment
+automatically. The downloaded catalog cache is intentionally ignored by git.
 
 ## Adding a new culture
 
@@ -46,7 +72,7 @@ To build anchors for a different Stellarium culture:
 
 ```bash
 uv run scripts/build-anchors.py \
-    --hip-parquet path/to/hip_stars.parquet \
+    --download \
     --index vendor/stellarium-skycultures/<culture>/index.json \
     --output packages/stellarium-skycultures-<culture>/source/constellation-anchors.json
 ```
@@ -58,8 +84,15 @@ uv run scripts/build-anchors.py \
 
 The script:
 1. Reads the culture's `index.json` and collects every Hipparcos ID referenced by a constellation image anchor.
-2. Reads those stars from the Hipparcos parquet (`source_id` column, which is the HIP number).
-3. Normalises each star's `(x_icrs_pc, y_icrs_pc, z_icrs_pc)` coordinates to a unit direction vector.
-4. Writes `{ "HIP_ID": [x, y, z], ... }` as compact JSON.
+2. Reads those stars from the cached Hipparcos New Reduction ECSV (`HIP`, `RArad`, `DErad`, `Plx`, `pmRA`, and `pmDE` columns).
+3. Propagates usable positions from the Hipparcos epoch `J1991.25` to `J2016.0`.
+4. Normalises each propagated ICRS Cartesian coordinate to a unit vector.
+5. Derives `raDeg` and `decDeg` from that unit vector.
+6. Writes `{ "HIP_ID": { "icrs": { "x": x, "y": y, "z": z }, "raDeg": ra, "decDeg": dec }, ... }` as compact JSON.
 
-Any HIP IDs not found in the parquet are reported as warnings — the corresponding constellations will be skipped by the JS build script.
+Any HIP IDs not found in usable Hipparcos data, or missing usable parallax and
+proper motion, are reported as warnings and omitted from the source anchor file.
+The JS package build will then fail clearly if a Stellarium image still depends
+on one of those missing anchors. This keeps the generated anchors consistent
+with the declared package epoch instead of mixing propagated and unpropagated
+positions.
