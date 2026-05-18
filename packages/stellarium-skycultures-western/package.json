@@ -4,6 +4,11 @@
   "description": "Western Stellarium sky culture assets packaged for Found in Space viewers",
   "type": "module",
   "license": "SEE LICENSE IN LICENSE.txt",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Found-in-Space/stellarium-skycultures",
+    "directory": "packages/stellarium-skycultures-western"
+  },
   "files": [
     "dist",
     "src",

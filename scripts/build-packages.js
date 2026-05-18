@@ -202,6 +202,11 @@ function createPackageJson(config) {
     description: config.description,
     type: 'module',
     license: 'SEE LICENSE IN LICENSE.txt',
+    repository: {
+      type: 'git',
+      url: 'https://github.com/Found-in-Space/stellarium-skycultures',
+      directory: path.relative(repoRoot, config.packageDir),
+    },
     files: [
       'dist',
       'src',
