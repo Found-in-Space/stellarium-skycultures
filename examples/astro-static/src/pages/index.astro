@@ -1,0 +1,27 @@
+---
+import orionImage from '@found-in-space/stellarium-skycultures-western/illustrations/orion.webp';
+
+const orionUrl = typeof orionImage === 'string' ? orionImage : orionImage.src;
+---
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Astro Skyculture Static Asset</title>
+    <style>
+      :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #02040b; color: white; }
+      main { width: min(42rem, calc(100vw - 2rem)); text-align: center; }
+      img { max-width: min(30rem, 82vw); max-height: 70vh; object-fit: contain; }
+      code { color: #9bdcff; overflow-wrap: anywhere; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>Orion</h1>
+      <img src={orionUrl} alt="Orion constellation art from the Western skyculture package" />
+      <p><code>{orionUrl}</code></p>
+    </main>
+  </body>
+</html>

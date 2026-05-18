@@ -35,9 +35,26 @@ The JS build script (`scripts/build-packages.js`) combines these into a `manifes
 ```bash
 npm run build           # build all packaged cultures
 npm run build:western   # build only the Western package
+npm run examples:build  # prove the package works in real consumer apps
 ```
 
 Generated `dist/` output is not committed to git. It is rebuilt locally and automatically during `prepack` before npm publishing.
+
+## Bundler Proofs
+
+The `examples/` directory contains small buildable apps rather than documentation-only snippets:
+
+- `examples/astro-static`: Astro frontmatter imports a single illustration asset directly.
+- `examples/astro-client`: Astro client-side script imports the generated bundled manifest.
+- `examples/vite`: Vite imports the generated bundled manifest.
+- `examples/webpack`: Webpack 5 imports the generated bundled manifest.
+- `examples/rspack`: Rspack imports the generated bundled manifest.
+- `examples/rollup`: Rollup imports the generated bundled manifest with explicit resolve, JSON, and import-meta asset plugins.
+- `examples/parcel`: Parcel imports the generated bundled manifest with `@parcel/resolver-default.packageExports` enabled.
+- `examples/esbuild-direct-asset`: esbuild imports a direct illustration asset with a file loader.
+- `examples/node-esm`: Node ESM resolves package-relative file URLs without bundling.
+
+`npm run examples:build` packs the local generated package into a tarball, installs that tarball into each example, and runs the example's production build. This is the compatibility contract for the package surface. Parcel requires its package exports resolver option because Parcel 2 keeps `package.json#exports` support disabled by default.
 
 ## Repository layout
 
@@ -46,6 +63,7 @@ vendor/stellarium-skycultures/        upstream Stellarium skyculture sources (su
 scripts/
   build-packages.js                   JS packaging script
   build-anchors.py                    Python script to regenerate constellation-anchors.json
+  build-examples.js                   installs local package tarballs into example apps
 docs/
   building-anchors.md                 how to regenerate anchor data for a culture
 packages/

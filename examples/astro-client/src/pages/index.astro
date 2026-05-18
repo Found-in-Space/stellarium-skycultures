@@ -1,0 +1,36 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width" />
+    <title>Astro Skyculture Client Manifest</title>
+    <style>
+      :root { color-scheme: dark; font-family: system-ui, sans-serif; }
+      body { margin: 0; min-height: 100vh; display: grid; place-items: center; background: #02040b; color: white; }
+      main { width: min(42rem, calc(100vw - 2rem)); text-align: center; }
+      img { max-width: min(30rem, 82vw); max-height: 70vh; object-fit: contain; }
+      code { color: #9bdcff; overflow-wrap: anywhere; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1 data-title>Loading Orion...</h1>
+      <img data-art alt="Orion constellation art from the Western skyculture package" />
+      <p><code data-url></code></p>
+    </main>
+    <script>
+      import { bundledManifest } from '@found-in-space/stellarium-skycultures-western/bundled';
+
+      const orion = bundledManifest.constellations.find((entry) => entry.id === 'orion')
+        ?? bundledManifest.constellations.find((entry) => entry.iau === 'Ori');
+
+      if (!orion?.image?.url) {
+        throw new Error('Orion artwork was not found in bundled manifest.');
+      }
+
+      document.querySelector('[data-title]').textContent = orion.metadata?.common_name ?? orion.id;
+      document.querySelector('[data-art]').src = orion.image.url;
+      document.querySelector('[data-url]').textContent = orion.image.url;
+    </script>
+  </body>
+</html>

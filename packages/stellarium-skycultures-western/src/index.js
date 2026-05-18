@@ -18,7 +18,7 @@ function normalizeBaseUrl(value) {
 
 export const manifest = manifestJson;
 export const manifestUrl = new URL('../dist/manifest.json', import.meta.url);
-export const assetBaseUrl = new URL('../dist/', import.meta.url);
+export const assetBaseUrl = new URL('./', manifestUrl);
 
 export function createManifest(options = {}) {
   const nextManifest = cloneManifest(manifest);

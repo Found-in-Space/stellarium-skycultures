@@ -1,0 +1,13 @@
+{
+  "name": "stellarium-skyculture-example-vite",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "vite build"
+  },
+  "dependencies": {
+    "@found-in-space/stellarium-skycultures-western": "^0.2.0",
+    "vite": "^7.3.2"
+  },
+  "devDependencies": {}
+}

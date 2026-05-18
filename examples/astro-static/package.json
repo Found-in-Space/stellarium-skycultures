@@ -1,0 +1,12 @@
+{
+  "name": "stellarium-skyculture-example-astro-static",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "astro build"
+  },
+  "dependencies": {
+    "@found-in-space/stellarium-skycultures-western": "^0.2.0",
+    "astro": "^6.1.1"
+  }
+}

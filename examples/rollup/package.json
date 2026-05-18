@@ -1,0 +1,15 @@
+{
+  "name": "stellarium-skyculture-example-rollup",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "rollup -c"
+  },
+  "dependencies": {
+    "@found-in-space/stellarium-skycultures-western": "^0.2.0",
+    "@rollup/plugin-json": "^6.1.0",
+    "@rollup/plugin-node-resolve": "^16.0.3",
+    "@web/rollup-plugin-import-meta-assets": "^2.3.0",
+    "rollup": "^4.53.3"
+  }
+}

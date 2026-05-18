@@ -1,0 +1,11 @@
+{
+  "name": "stellarium-skyculture-example-node-esm",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "node main.js"
+  },
+  "dependencies": {
+    "@found-in-space/stellarium-skycultures-western": "^0.2.0"
+  }
+}

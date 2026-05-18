@@ -1,0 +1,15 @@
+{
+  "name": "stellarium-skyculture-example-parcel",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "parcel build index.html --dist-dir dist --no-cache"
+  },
+  "@parcel/resolver-default": {
+    "packageExports": true
+  },
+  "dependencies": {
+    "@found-in-space/stellarium-skycultures-western": "^0.2.0",
+    "parcel": "^2.16.4"
+  }
+}

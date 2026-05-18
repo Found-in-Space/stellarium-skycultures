@@ -264,10 +264,33 @@ const manifestResponse = await fetch(manifestUrl);
 const manifest = await manifestResponse.json();
 \`\`\`
 
-Bundler usage can import asset URLs that are visible to Vite/Rollup, Webpack 5, and Parcel 2:
+Bundler usage can import asset URLs that are visible to Vite, Astro client scripts, Webpack 5, Rspack, Rollup with asset plugins, and Parcel with package exports enabled:
 
 \`\`\`js
 import { bundledManifest } from '${config.packageName}/bundled';
+\`\`\`
+
+Astro frontmatter runs on the server, so use direct asset imports there:
+
+\`\`\`js
+import orionImage from '${config.packageName}/illustrations/orion.webp';
+const orionUrl = typeof orionImage === 'string' ? orionImage : orionImage.src;
+\`\`\`
+
+The repository contains buildable fixtures for Astro static imports, Astro client scripts, Vite, Webpack 5, Rspack, Rollup, Parcel, esbuild direct asset imports, and Node ESM:
+
+\`\`\`bash
+npm run examples:build
+\`\`\`
+
+Parcel 2 requires:
+
+\`\`\`json
+{
+  "@parcel/resolver-default": {
+    "packageExports": true
+  }
+}
 \`\`\`
 
 The package intentionally does not publish data-url assets. Apps that need a single JavaScript artifact should inline assets in their own bundler configuration.
@@ -295,7 +318,7 @@ function normalizeBaseUrl(value) {
 
 export const manifest = manifestJson;
 export const manifestUrl = new URL('../dist/manifest.json', import.meta.url);
-export const assetBaseUrl = new URL('../dist/', import.meta.url);
+export const assetBaseUrl = new URL('./', manifestUrl);
 
 export function createManifest(options = {}) {
   const nextManifest = cloneManifest(manifest);

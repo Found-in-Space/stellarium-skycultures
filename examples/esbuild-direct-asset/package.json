@@ -1,0 +1,12 @@
+{
+  "name": "stellarium-skyculture-example-esbuild-direct-asset",
+  "private": true,
+  "type": "module",
+  "scripts": {
+    "build": "esbuild src/main.js --bundle --format=esm --outdir=dist --asset-names=assets/[name]-[hash] --loader:.webp=file"
+  },
+  "dependencies": {
+    "@found-in-space/stellarium-skycultures-western": "^0.2.0",
+    "esbuild": "^0.27.1"
+  }
+}
