@@ -8,7 +8,7 @@ Packaged Western constellation artwork derived from Stellarium sky cultures for 
 - `dist/illustrations/*`: packaged artwork assets
 - `dist/description.md`: upstream culture description
 
-The viewer should consume the generated manifest rather than the legacy standalone `constellation_anchors.json` web asset.
+The viewer should consume the generated manifest rather than the legacy standalone anchor data.
 
 Generated `dist/` output is intended to stay out of git. Build it locally or via `prepack` before publishing to npm.
 
@@ -17,17 +17,24 @@ Generated `dist/` output is intended to stay out of git. Build it locally or via
 From the repo root:
 
 ```bash
-npm run build:western
+npm run build -- western
 ```
 
 ## Usage
 
-```js
-import { createWesternManifest } from '@found-in-space/stellarium-skycultures-western';
+No-bundler or CDN usage can fetch the generated manifest and resolve images relative to it:
 
-const manifest = createWesternManifest({
-  baseUrl: 'https://unpkg.com/@found-in-space/stellarium-skycultures-western@0.1.0/dist/',
-});
+```js
+import { manifestUrl } from '@found-in-space/stellarium-skycultures-western';
+
+const manifestResponse = await fetch(manifestUrl);
+const manifest = await manifestResponse.json();
 ```
 
-`createWesternManifest({ baseUrl })` preserves the original relative asset paths and adds resolved `image.url` fields for consumers that want fully-qualified URLs.
+Bundler usage can import asset URLs that are visible to Vite/Rollup, Webpack 5, and Parcel 2:
+
+```js
+import { bundledManifest } from '@found-in-space/stellarium-skycultures-western/bundled';
+```
+
+The package intentionally does not publish data-url assets. Apps that need a single JavaScript artifact should inline assets in their own bundler configuration.

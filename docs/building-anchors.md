@@ -41,7 +41,7 @@ uv run scripts/build-anchors.py --hip-parquet path/to/hip_stars.parquet
 To build anchors for a different Stellarium culture:
 
 1. Make sure the culture's `index.json` references anchors by Hipparcos ID (not all cultures do — check the `image.anchors` array in the index).
-2. Add the culture to `CULTURE_PACKAGES` in `scripts/build-packages.js` and create its package directory under `packages/`.
+2. Create `packages/stellarium-skycultures-<culture>/source/package-config.json` and the package `source/` directory. The JS package generator discovers culture packages from these configs.
 3. Run the anchor script pointing at that culture's index and your chosen output path:
 
 ```bash
