@@ -9,7 +9,7 @@ Add a changeset when a package-facing change should be published:
 npm run changeset
 ```
 
-When preparing a release, apply pending changesets:
+When preparing a release manually, apply pending changesets:
 
 ```sh
 npm run version-packages
@@ -22,4 +22,6 @@ npm run release
 ```
 
 Normal releases should happen through GitHub Actions and npm Trusted
-Publishing. See `docs/releasing.md`.
+Publishing. See `docs/releasing.md`, including the current Found in Space
+organization limitation that may require opening the `changeset-release/main`
+pull request manually.
