@@ -6,7 +6,7 @@
   "license": "SEE LICENSE IN LICENSE.txt",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Found-in-Space/stellarium-skycultures",
+    "url": "git+https://github.com/Found-in-Space/stellarium-skycultures.git",
     "directory": "packages/stellarium-skycultures-western"
   },
   "files": [

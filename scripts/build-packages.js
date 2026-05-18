@@ -204,7 +204,7 @@ function createPackageJson(config) {
     license: 'SEE LICENSE IN LICENSE.txt',
     repository: {
       type: 'git',
-      url: 'https://github.com/Found-in-Space/stellarium-skycultures',
+      url: 'git+https://github.com/Found-in-Space/stellarium-skycultures.git',
       directory: path.relative(repoRoot, config.packageDir),
     },
     files: [
