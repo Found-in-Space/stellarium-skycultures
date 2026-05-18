@@ -12,6 +12,14 @@
   ],
   "scripts": {
     "build": "node ./scripts/build-packages.js",
-    "build:western": "node ./scripts/build-packages.js western"
+    "build:western": "node ./scripts/build-packages.js western",
+    "changeset": "changeset",
+    "version-packages": "changeset version",
+    "release": "changeset publish",
+    "release:checked": "npm run build && npm test && changeset publish",
+    "test": "node ./scripts/smoke-test.js"
+  },
+  "devDependencies": {
+    "@changesets/cli": "^2.31.0"
   }
 }

@@ -1,4 +1,4 @@
-import manifest from '../dist/manifest.json' with { type: 'json' };
+import manifestJson from '../dist/manifest.json' with { type: 'json' };
 
 function cloneManifest(value) {
   return JSON.parse(JSON.stringify(value));
@@ -16,12 +16,12 @@ function normalizeBaseUrl(value) {
   return new URL(value.endsWith('/') ? value : `${value}/`);
 }
 
-export const westernManifest = manifest;
-export const westernManifestUrl = new URL('../dist/manifest.json', import.meta.url);
-export const westernAssetBaseUrl = new URL('../dist/', import.meta.url);
+export const manifest = manifestJson;
+export const manifestUrl = new URL('../dist/manifest.json', import.meta.url);
+export const assetBaseUrl = new URL('../dist/', import.meta.url);
 
-export function createWesternManifest(options = {}) {
-  const nextManifest = cloneManifest(westernManifest);
+export function createManifest(options = {}) {
+  const nextManifest = cloneManifest(manifest);
   const baseUrl = normalizeBaseUrl(options.baseUrl);
 
   if (!baseUrl) {
@@ -50,6 +50,6 @@ export function createWesternManifest(options = {}) {
   return nextManifest;
 }
 
-export function resolveWesternAssetUrl(relativePath, baseUrl = westernAssetBaseUrl) {
+export function resolveAssetUrl(relativePath, baseUrl = assetBaseUrl) {
   return new URL(relativePath, baseUrl).href;
 }

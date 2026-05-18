@@ -12,9 +12,13 @@
   ],
   "exports": {
     ".": "./src/index.js",
+    "./bundled": "./src/bundled.js",
     "./manifest.json": "./dist/manifest.json",
     "./description.md": "./dist/description.md",
     "./illustrations/*": "./dist/illustrations/*"
+  },
+  "publishConfig": {
+    "access": "public"
   },
   "scripts": {
     "build": "node ../../scripts/build-packages.js western",

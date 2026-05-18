@@ -1,0 +1,13 @@
+{
+  "cultureId": "western",
+  "packageName": "@found-in-space/stellarium-skycultures-western",
+  "version": "0.1.0",
+  "displayName": "Western",
+  "description": "Western Stellarium sky culture assets packaged for Found in Space viewers",
+  "vendorCultureDir": "western",
+  "anchorsPath": "source/constellation-anchors.json",
+  "license": {
+    "textAndData": "CC BY-SA",
+    "illustrations": "Free Art License"
+  }
+}
